@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.support.JpaEntityInformation;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 
 import com.example.base_pulse.specifications.SearchCriteria;
-
+import com.example.base_pulse.specifications.SortCriteria;
 import com.example.base_pulse.utils.TypeConverter;
 
 import jakarta.persistence.EntityManager;
@@ -24,6 +24,8 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Selection;
 import jakarta.persistence.metamodel.EntityType;
+import jakarta.persistence.criteria.Order;
+import org.springframework.data.domain.Sort;
 
 public class GenericJpaRepositoryCustomImpl<T, ID extends Serializable>
         extends SimpleJpaRepository<T, ID>
@@ -36,7 +38,8 @@ public class GenericJpaRepositoryCustomImpl<T, ID extends Serializable>
         this.em = em;
     }
 
-    public List<Map<String, Object>> fetchValues(String entityName, List<String> fields, List<SearchCriteria> filters) {
+    public List<Map<String, Object>> fetchValues(String entityName, List<String> fields, List<SearchCriteria> filters,
+            List<SortCriteria> sort) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Tuple> query = cb.createTupleQuery();
 
@@ -64,12 +67,22 @@ public class GenericJpaRepositoryCustomImpl<T, ID extends Serializable>
                     predicates.add(cb.equal(path, parsed));
                     break;
                 }
-                // أضف عمليات أخرى حسب الحاجة
             }
         }
 
         if (!predicates.isEmpty()) {
             query.where(cb.and(predicates.toArray(new Predicate[0])));
+        }
+
+        if (sort != null && !sort.isEmpty()) {
+            List<Order> orders = sort.stream()
+                    .map(sc -> {
+                        Path<Object> path = getPath(root, sc.getField());
+                        return sc.getDirection() == Sort.Direction.ASC ? cb.asc(path) : cb.desc(path);
+                    })
+                    .toList();
+
+            query.orderBy(orders);
         }
 
         List<Tuple> results = em.createQuery(query).getResultList();
@@ -78,7 +91,7 @@ public class GenericJpaRepositoryCustomImpl<T, ID extends Serializable>
                 .map(t -> {
                     Map<String, Object> row = new HashMap<>();
                     for (String f : fields) {
-                        row.put(f, t.get(f)); // alias = field name
+                        row.put(f, t.get(f));
                     }
                     return row;
                 })

@@ -4,13 +4,16 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 import com.example.base_pulse.entities.BaseEntity;
 import com.example.base_pulse.repositories.GenericJpaRepository;
 import com.example.base_pulse.specifications.GenericSpecification;
 import com.example.base_pulse.specifications.SearchCriteria;
+import com.example.base_pulse.specifications.SortCriteria;
 import com.example.base_pulse.utils.ObjectMerger;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -36,14 +39,28 @@ public abstract class BaseServiceImpl<T extends BaseEntity> implements BaseServi
     }
 
     @Override
-    public List<T> findAll(Pageable pageable, List<SearchCriteria> filters) {
-        Page<T> page;
-        if (filters.isEmpty()) {
-            Specification<T> spec = new GenericSpecification<>(filters);
-            page = repository.findAll(spec, pageable);
-        } else {
-            page = repository.findAll(pageable);
+    public List<T> findAll(Pageable pageable, List<SearchCriteria> filters, List<SortCriteria> sort) {
+        Sort finalSort = Sort.unsorted();
+        if (sort != null && !sort.isEmpty()) {
+            List<Sort.Order> orders = sort.stream()
+                    .map(s -> new Sort.Order(s.getDirection(), s.getField()))
+                    .toList();
+            finalSort = Sort.by(orders);
         }
+
+        Pageable finalPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                finalSort);
+
+        Page<T> page;
+        if (filters == null || filters.isEmpty()) {
+            page = repository.findAll(finalPageable);
+        } else {
+            Specification<T> spec = new GenericSpecification<>(filters);
+            page = repository.findAll(spec, finalPageable);
+        }
+
         return page.getContent();
     }
 
@@ -75,9 +92,11 @@ public abstract class BaseServiceImpl<T extends BaseEntity> implements BaseServi
     }
 
     @Override
-    public List<Map<String, Object>> findWithFieldsAndFilters(String entity, List<String> fields,
-            List<SearchCriteria> searchCriterias) {
-        return repository.fetchValues(entity, fields, searchCriterias);
+    public List<Map<String, Object>> findWithFieldsAndFilters(String entity,
+            List<String> fields,
+            List<SearchCriteria> filters,
+            List<SortCriteria> sort) {
+        return repository.fetchValues(entity, fields, filters, sort);
     }
 
 }

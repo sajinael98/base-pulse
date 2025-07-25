@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.base_pulse.entities.BaseEntity;
 import com.example.base_pulse.services.BaseService;
 import com.example.base_pulse.specifications.SearchCriteria;
+import com.example.base_pulse.specifications.SortCriteria;
 import com.example.base_pulse.utils.QueryCriteriaBuilder;
 
 import lombok.RequiredArgsConstructor;
@@ -55,11 +56,8 @@ public abstract class BaseController<T extends BaseEntity> {
     public ResponseEntity<List<T>> getAll(@RequestParam Map<String, String> requestParams,
             @PageableDefault(size = 20, page = 0) Pageable pageable) {
         List<SearchCriteria> searchCriterias = QueryCriteriaBuilder.parseFiltersFromParams(requestParams);
-        if (searchCriterias.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Search filters are required. Cannot execute query without filter conditions.");
-        }
-        return ResponseEntity.ok(service.findAll(pageable, searchCriterias));
+        List<SortCriteria> sort = QueryCriteriaBuilder.parseSortsFromParams(requestParams);
+        return ResponseEntity.ok(service.findAll(pageable, searchCriterias, sort));
     }
 
     @DeleteMapping("/{id}")
@@ -88,8 +86,9 @@ public abstract class BaseController<T extends BaseEntity> {
             throw new IllegalArgumentException(
                     "fields are required. Cannot execute query without fields.");
         }
+        List<SortCriteria> sort = QueryCriteriaBuilder.parseSortsFromParams(requestParams);
 
-        List<Map<String, Object>> values = service.findWithFieldsAndFilters(entity, fields, searchCriterias);
+        List<Map<String, Object>> values = service.findWithFieldsAndFilters(entity, fields, searchCriterias, sort);
         return ResponseEntity.ok().body(values);
     }
 }
