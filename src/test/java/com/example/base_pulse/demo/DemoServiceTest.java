@@ -3,6 +3,7 @@ package com.example.base_pulse.demo;
 import com.example.base_pulse.repositories.GenericJpaRepository;
 import com.example.base_pulse.specifications.SearchCriteria;
 import com.example.base_pulse.specifications.SortCriteria;
+import com.example.base_pulse.utils.PageResult;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -134,25 +135,27 @@ class DemoServiceTest {
     @Test
     void findAll_withoutFilters_returnsPagedContent() {
         Pageable pageable = PageRequest.of(0, 10);
-        Page<Demo> page = new PageImpl<>(List.of(demo1));
+        Page<Demo> page = new PageImpl<>(List.of(demo1), pageable, 1);
         when(repository.findAll(any(Pageable.class))).thenReturn(page);
 
-        List<Demo> result = service.findAll(pageable, null, null);
+        PageResult<Demo> result = service.findAll(pageable, null, null);
 
-        assertThat(result).containsExactly(demo1);
+        assertThat(result.getContent()).containsExactly(demo1);
+        assertThat(result.getTotal()).isEqualTo(1);
     }
 
     @Test
     void findAll_withFilters_shouldUseSpecification() {
         SearchCriteria filter = new SearchCriteria("name", SearchCriteria.SearchOperation.EQUAL, "Saji");
         Pageable pageable = PageRequest.of(0, 10);
-        Page<Demo> page = new PageImpl<>(List.of(demo1));
+        Page<Demo> page = new PageImpl<>(List.of(demo1), pageable, 1);
 
         when(repository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
 
-        List<Demo> result = service.findAll(pageable, List.of(filter), null);
+        PageResult<Demo> result = service.findAll(pageable, List.of(filter), null);
 
-        assertThat(result).containsExactly(demo1);
+        assertThat(result.getContent()).containsExactly(demo1);
+        assertThat(result.getTotal()).isEqualTo(1);
         verify(repository).findAll(any(Specification.class), eq(pageable));
     }
 
@@ -160,13 +163,14 @@ class DemoServiceTest {
     void findAll_withSort_shouldApplySorting() {
         SortCriteria sort = new SortCriteria("id", Sort.Direction.DESC);
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Order.desc("id")));
-        Page<Demo> page = new PageImpl<>(List.of(demo1, demo2));
+        Page<Demo> page = new PageImpl<>(List.of(demo1, demo2), pageable, 2);
 
         when(repository.findAll(any(Pageable.class))).thenReturn(page);
 
-        List<Demo> result = service.findAll(PageRequest.of(0, 10), null, List.of(sort));
+        PageResult<Demo> result = service.findAll(PageRequest.of(0, 10), null, List.of(sort));
 
-        assertThat(result).containsExactly(demo1, demo2);
+        assertThat(result.getContent()).containsExactly(demo1, demo2);
+        assertThat(result.getTotal()).isEqualTo(2);
         verify(repository).findAll(eq(pageable));
     }
 
@@ -176,13 +180,14 @@ class DemoServiceTest {
         SortCriteria sort = new SortCriteria("id", Sort.Direction.ASC);
 
         Pageable pageable = PageRequest.of(0, 10, Sort.by("id"));
-        Page<Demo> page = new PageImpl<>(List.of(demo1));
+        Page<Demo> page = new PageImpl<>(List.of(demo1), pageable, 1);
 
         when(repository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
 
-        List<Demo> result = service.findAll(PageRequest.of(0, 10), List.of(filter), List.of(sort));
+        PageResult<Demo> result = service.findAll(PageRequest.of(0, 10), List.of(filter), List.of(sort));
 
-        assertThat(result).containsExactly(demo1);
+        assertThat(result.getContent()).containsExactly(demo1);
+        assertThat(result.getTotal()).isEqualTo(1);
         verify(repository).findAll(any(Specification.class), eq(pageable));
     }
 

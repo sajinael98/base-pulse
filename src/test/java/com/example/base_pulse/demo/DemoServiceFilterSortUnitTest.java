@@ -1,23 +1,29 @@
 package com.example.base_pulse.demo;
 
-import com.example.base_pulse.repositories.GenericJpaRepository;
-import com.example.base_pulse.services.BaseServiceImpl;
-import com.example.base_pulse.specifications.SearchCriteria;
-import com.example.base_pulse.specifications.SortCriteria;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import com.example.base_pulse.repositories.GenericJpaRepository;
+import com.example.base_pulse.specifications.SearchCriteria;
+import com.example.base_pulse.specifications.SortCriteria;
+import com.example.base_pulse.utils.PageResult;
 
 class DemoServiceFilterSortUnitTest {
 
@@ -47,21 +53,21 @@ class DemoServiceFilterSortUnitTest {
 
   @Test
   void findAll_withFilterAndSort_shouldReturnFilteredAndSorted() {
+    // Arrange
     SearchCriteria filter = new SearchCriteria("name", SearchCriteria.SearchOperation.EQUAL, "Saji");
     SortCriteria sort = new SortCriteria("id", Sort.Direction.ASC);
 
     Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Order.asc("id")));
-    Page<Demo> page = new PageImpl<>(List.of(demo1));
+    Page<Demo> page = new PageImpl<>(List.of(demo1), pageable, 1);
 
     when(repository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
 
-    List<Demo> result = service.findAll(
-        PageRequest.of(0, 10),
-        List.of(filter),
-        List.of(sort));
+    // Act
+    PageResult<Demo> result = service.findAll(PageRequest.of(0, 10), List.of(filter), List.of(sort));
 
-    assertThat(result).containsExactly(demo1);
+    // Assert
+    assertThat(result.getContent()).containsExactly(demo1);
+    assertThat(result.getTotal()).isEqualTo(1);
     verify(repository).findAll(any(Specification.class), eq(pageable));
   }
-
 }

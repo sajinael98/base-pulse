@@ -15,6 +15,7 @@ import com.example.base_pulse.specifications.GenericSpecification;
 import com.example.base_pulse.specifications.SearchCriteria;
 import com.example.base_pulse.specifications.SortCriteria;
 import com.example.base_pulse.utils.ObjectMerger;
+import com.example.base_pulse.utils.PageResult;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -39,7 +40,7 @@ public abstract class BaseServiceImpl<T extends BaseEntity> implements BaseServi
     }
 
     @Override
-    public List<T> findAll(Pageable pageable, List<SearchCriteria> filters, List<SortCriteria> sort) {
+    public PageResult<T> findAll(Pageable pageable, List<SearchCriteria> filters, List<SortCriteria> sort) {
         Sort finalSort = Sort.unsorted();
         if (sort != null && !sort.isEmpty()) {
             List<Sort.Order> orders = sort.stream()
@@ -61,7 +62,7 @@ public abstract class BaseServiceImpl<T extends BaseEntity> implements BaseServi
             page = repository.findAll(spec, finalPageable);
         }
 
-        return page.getContent();
+        return new PageResult<>(page.getContent(), page.getTotalElements());
     }
 
     @Override

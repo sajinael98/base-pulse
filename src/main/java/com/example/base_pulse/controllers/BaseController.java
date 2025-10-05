@@ -22,6 +22,7 @@ import com.example.base_pulse.entities.BaseEntity;
 import com.example.base_pulse.services.BaseService;
 import com.example.base_pulse.specifications.SearchCriteria;
 import com.example.base_pulse.specifications.SortCriteria;
+import com.example.base_pulse.utils.PageResult;
 import com.example.base_pulse.utils.QueryCriteriaBuilder;
 
 import lombok.RequiredArgsConstructor;
@@ -53,7 +54,7 @@ public abstract class BaseController<T extends BaseEntity> {
     }
 
     @GetMapping
-    public ResponseEntity<List<T>> getAll(@RequestParam Map<String, String> requestParams,
+    public ResponseEntity<PageResult<T>> getAll(@RequestParam Map<String, String> requestParams,
             @PageableDefault(size = 20, page = 0) Pageable pageable) {
         List<SearchCriteria> searchCriterias = QueryCriteriaBuilder.parseFiltersFromParams(requestParams);
         List<SortCriteria> sort = QueryCriteriaBuilder.parseSortsFromParams(requestParams);
