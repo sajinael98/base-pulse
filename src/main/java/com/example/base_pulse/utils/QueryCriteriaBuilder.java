@@ -89,7 +89,7 @@ public class QueryCriteriaBuilder {
     }
 
     public static List<SortCriteria> parseSortsFromParams(Map<String, String> params) {
-        Pattern pattern = Pattern.compile("sorters\\[(\\d+)]\\[(\\w+)]");
+        Pattern pattern = Pattern.compile("sort\\[(\\d+)]\\[(\\w+)]");
         Map<Integer, SortCriteria> sortMap = new HashMap<>();
 
         for (Map.Entry<String, String> entry : params.entrySet()) {
