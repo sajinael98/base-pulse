@@ -20,10 +20,10 @@ import com.example.base_pulse.utils.PageResult;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 
-public abstract class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
-    protected final GenericJpaRepository<T> repository;
+public  class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
+    private final GenericJpaRepository<T> repository;
 
-    protected BaseServiceImpl(GenericJpaRepository<T> repository) {
+    public BaseServiceImpl(GenericJpaRepository<T> repository) {
         this.repository = repository;
     }
 
@@ -93,11 +93,9 @@ public abstract class BaseServiceImpl<T extends BaseEntity> implements BaseServi
     }
 
     @Override
-    public List<Map<String, Object>> findWithFieldsAndFilters(String entity,
-            List<String> fields,
-            List<SearchCriteria> filters,
-            List<SortCriteria> sort) {
-        return repository.fetchValues(entity, fields, filters, sort);
+    public List<Map<String, Object>> findDynamic(String entity, List<String> fields, List<SearchCriteria> filters,
+            List<SortCriteria> sort, Pageable pageable) {
+        return repository.findDynamic(entity, fields, filters, sort, pageable);
     }
 
 }

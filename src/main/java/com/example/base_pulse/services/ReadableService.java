@@ -16,9 +16,11 @@ public interface ReadableService<T extends BaseEntity> {
 
         PageResult<T> findAll(Pageable pageable, List<SearchCriteria> filters, List<SortCriteria> sort);
 
-        List<Map<String, Object>> findWithFieldsAndFilters(
+        List<Map<String, Object>> findDynamic(
                         String entity,
                         List<String> fields,
                         List<SearchCriteria> filters,
-                        List<SortCriteria> sort);
+                        List<SortCriteria> sort,
+                        Pageable pageable);
+
 }
