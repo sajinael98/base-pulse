@@ -8,7 +8,6 @@ import com.example.base_pulse.entities.BaseEntity;
 
 @NoRepositoryBean
 public interface GenericJpaRepository<T extends BaseEntity> extends
-                JpaRepository<T, Long>,
-                JpaSpecificationExecutor<T>,
-                GenericJpaRepositoryCustom<T> {
+    JpaRepository<T, Long>,
+    JpaSpecificationExecutor<T> {
 }

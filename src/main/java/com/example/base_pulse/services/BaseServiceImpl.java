@@ -1,5 +1,6 @@
 package com.example.base_pulse.services;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -8,19 +9,21 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.base_pulse.entities.BaseEntity;
 import com.example.base_pulse.repositories.GenericJpaRepository;
-import com.example.base_pulse.specifications.GenericSpecification;
+import com.example.base_pulse.specifications.DynamicPredicateBuilder;
 import com.example.base_pulse.specifications.SearchCriteria;
 import com.example.base_pulse.specifications.SortCriteria;
 import com.example.base_pulse.utils.ObjectMerger;
 import com.example.base_pulse.utils.PageResult;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 
-public  class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
+public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
     private final GenericJpaRepository<T> repository;
 
     public BaseServiceImpl(GenericJpaRepository<T> repository) {
@@ -41,6 +44,7 @@ public  class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
 
     @Override
     public PageResult<T> findAll(Pageable pageable, List<SearchCriteria> filters, List<SortCriteria> sort) {
+
         Sort finalSort = Sort.unsorted();
         if (sort != null && !sort.isEmpty()) {
             List<Sort.Order> orders = sort.stream()
@@ -54,13 +58,21 @@ public  class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
                 pageable.getPageSize(),
                 finalSort);
 
-        Page<T> page;
-        if (filters == null || filters.isEmpty()) {
-            page = repository.findAll(finalPageable);
-        } else {
-            Specification<T> spec = new GenericSpecification<>(filters);
-            page = repository.findAll(spec, finalPageable);
+        Specification<T> spec = null;
+
+        if (filters != null && !filters.isEmpty()) {
+            spec = (root, query, cb) -> {
+                List<Predicate> preds = new ArrayList<>();
+                for (SearchCriteria sc : filters) {
+                    preds.add(DynamicPredicateBuilder.build(sc, root, cb));
+                }
+                return cb.and(preds.toArray(Predicate[]::new));
+            };
         }
+
+        Page<T> page = (spec == null)
+                ? repository.findAll(finalPageable)
+                : repository.findAll(spec, finalPageable);
 
         return new PageResult<>(page.getContent(), page.getTotalElements());
     }
@@ -91,11 +103,4 @@ public  class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
         }
         repository.deleteById(id);
     }
-
-    @Override
-    public List<Map<String, Object>> findDynamic(String entity, List<String> fields, List<SearchCriteria> filters,
-            List<SortCriteria> sort, Pageable pageable) {
-        return repository.findDynamic(entity, fields, filters, sort, pageable);
-    }
-
 }

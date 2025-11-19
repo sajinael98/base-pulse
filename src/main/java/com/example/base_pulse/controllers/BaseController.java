@@ -1,10 +1,7 @@
 package com.example.base_pulse.controllers;
 
-import java.lang.reflect.ParameterizedType;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -32,12 +29,8 @@ public abstract class BaseController<T extends BaseEntity> {
 
     protected final BaseService<T> service;
 
-    private final Class<T> entityClass;
-
     public BaseController(BaseService<T> service) {
         this.service = service;
-        ParameterizedType type = (ParameterizedType) getClass().getGenericSuperclass();
-        this.entityClass = (Class<T>) type.getActualTypeArguments()[0];
     }
 
     @PostMapping
@@ -97,31 +90,6 @@ public abstract class BaseController<T extends BaseEntity> {
         return ResponseEntity.ok(service.findAll(pageable, searchCriterias, sort));
     }
 
-    @GetMapping(params = "fields")
-    public ResponseEntity<List<Map<String, Object>>> getDynamic(
-            @RequestParam Map<String, String> requestParams,
-            @PageableDefault(size = 20, page = 0) Pageable pageable) {
-
-        if (isDisabled("read")) {
-            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
-                    .header("Allow", buildAllowedMethods())
-                    .build();
-        }
-
-        String entity = getEntityName();
-
-        List<SearchCriteria> filters = QueryCriteriaBuilder.parseFiltersFromParams(requestParams);
-        List<String> fields = Arrays.stream(
-                Optional.ofNullable(requestParams.get("fields")).orElse("").split(","))
-                .filter(s -> !s.isBlank())
-                .toList();
-        List<SortCriteria> sort = QueryCriteriaBuilder.parseSortsFromParams(requestParams);
-
-        List<Map<String, Object>> values = service.findDynamic(entity, fields, filters, sort, pageable);
-
-        return ResponseEntity.ok(values);
-    }
-
     private boolean isDisabled(String action) {
         DisableCrud annotation = this.getClass().getAnnotation(DisableCrud.class);
         if (annotation == null)
@@ -154,17 +122,9 @@ public abstract class BaseController<T extends BaseEntity> {
             allow.append("DELETE, ");
 
         if (allow.length() > 2) {
-            allow.setLength(allow.length() - 2); // إزالة الفاصلة والمسافة الأخيرة
+            allow.setLength(allow.length() - 2);
         }
 
         return allow.toString();
-    }
-
-    protected Class<T> getEntityClass() {
-        return entityClass;
-    }
-
-    protected String getEntityName() {
-        return entityClass.getSimpleName();
     }
 }

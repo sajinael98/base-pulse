@@ -2,6 +2,7 @@ package com.example.base_pulse.utils;
 
 import org.springframework.data.domain.Sort;
 
+import com.example.base_pulse.specifications.CrudOperator;
 import com.example.base_pulse.specifications.SearchCriteria;
 import com.example.base_pulse.specifications.SortCriteria;
 
@@ -22,7 +23,7 @@ public class QueryCriteriaBuilder {
     }
 
     public QueryCriteriaBuilder add(String field, String operator, String value) {
-        filters.add(new SearchCriteria(field, SearchCriteria.SearchOperation.fromOperator(operator), value));
+        filters.add(new SearchCriteria(field, CrudOperator.fromOperator(operator), value));
         return this;
     }
 
@@ -55,32 +56,45 @@ public class QueryCriteriaBuilder {
         for (Map.Entry<String, String> entry : params.entrySet()) {
             Matcher matcher = pattern.matcher(entry.getKey());
             if (matcher.matches()) {
+
                 int index = Integer.parseInt(matcher.group(1));
                 String property = matcher.group(2);
-                String valueIndex = matcher.group(3); // optional (for arrays)
+                String valueIndex = matcher.group(3);
 
                 filterMap.putIfAbsent(index, new SearchCriteria());
                 SearchCriteria filter = filterMap.get(index);
 
-                String value = entry.getValue();
+                String input = entry.getValue();
 
                 switch (property) {
-                    case "field":
-                        filter.setField(value);
-                        break;
-                    case "operator":
-                        filter.setOperation(SearchCriteria.SearchOperation.fromOperator(value));
-                        break;
-                    case "value":
-                        if (valueIndex != null) {
-                            if (filter.getValue() == null) {
-                                filter.setValue(new ArrayList<>());
-                            }
-                            ((Collection) filter.getValue()).add(value);
-                        } else {
-                            filter.setValue(value);
+
+                    case "field" -> filter.setField(input);
+
+                    case "operator" -> filter.setOperator(CrudOperator.fromOperator(input));
+
+                    case "value" -> {
+                        CrudOperator op = filter.getOperator();
+
+                        // BETWEEN: value[0], value[1]
+                        if (op == CrudOperator.BETWEEN && valueIndex != null) {
+                            if ("0".equals(valueIndex))
+                                filter.setValue(input);
+                            else if ("1".equals(valueIndex))
+                                filter.setValueTo(input);
                         }
-                        break;
+
+                        // IN / NIN: collect list
+                        else if ((op == CrudOperator.IN || op == CrudOperator.NIN) && valueIndex != null) {
+                            if (filter.getValue() == null)
+                                filter.setValue(new ArrayList<>());
+                            ((List<String>) filter.getValue()).add(input);
+                        }
+
+                        // Normal single value
+                        else if (valueIndex == null) {
+                            filter.setValue(input);
+                        }
+                    }
                 }
             }
         }
