@@ -13,6 +13,16 @@ public interface ReadableService<T extends BaseEntity> {
 
         T findById(Long id);
 
-        PageResult<T> findAll(Pageable pageable, List<SearchCriteria> filters, List<SortCriteria> sort);
+        PageResult<T> findAll(
+                        Pageable pageable,
+                        List<SearchCriteria> filters,
+                        List<SortCriteria> sort);
 
+        List<T> findAll();
+
+        List<T> findAllByIds(List<Long> ids);
+
+        boolean exists(Long id);
+
+        long count();
 }

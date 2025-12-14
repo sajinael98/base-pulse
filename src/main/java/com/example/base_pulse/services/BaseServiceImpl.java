@@ -2,14 +2,12 @@ package com.example.base_pulse.services;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.base_pulse.entities.BaseEntity;
 import com.example.base_pulse.repositories.GenericJpaRepository;
@@ -24,7 +22,8 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 
 public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
-    private final GenericJpaRepository<T> repository;
+
+    protected final GenericJpaRepository<T> repository;
 
     public BaseServiceImpl(GenericJpaRepository<T> repository) {
         this.repository = repository;
@@ -33,7 +32,13 @@ public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
     @Override
     @Transactional
     public T create(T entity) {
-        return repository.save(entity);
+        validate(entity);
+        beforeCreate(entity);
+        beforeSave(entity);
+        T saved = save(entity);
+        afterCreate(saved);
+        afterSave(saved);
+        return saved;
     }
 
     @Override
@@ -58,17 +63,7 @@ public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
                 pageable.getPageSize(),
                 finalSort);
 
-        Specification<T> spec = null;
-
-        if (filters != null && !filters.isEmpty()) {
-            spec = (root, query, cb) -> {
-                List<Predicate> preds = new ArrayList<>();
-                for (SearchCriteria sc : filters) {
-                    preds.add(DynamicPredicateBuilder.build(sc, root, cb));
-                }
-                return cb.and(preds.toArray(Predicate[]::new));
-            };
-        }
+        Specification<T> spec = buildSpecification(filters);
 
         Page<T> page = (spec == null)
                 ? repository.findAll(finalPageable)
@@ -80,27 +75,96 @@ public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
     @Override
     @Transactional
     public T replace(Long id, T fullEntity) {
-        if (!repository.existsById(id)) {
-            throw new EntityNotFoundException("Entity not found: " + id);
+        if (!exists(id)) {
+            throw new EntityNotFoundException("Entity with id " + id + " not found");
         }
+
+        validate(fullEntity);
         fullEntity.setId(id);
-        return repository.save(fullEntity);
+        beforeSave(fullEntity);
+        T saved = save(fullEntity);
+        afterSave(saved);
+        return saved;
     }
 
     @Override
     @Transactional
     public T patch(Long id, T partialEntity) {
-        T existingEntity = this.findById(id);
-        ObjectMerger.mergeNonNullFields(partialEntity, existingEntity);
-        return repository.save(existingEntity);
+        T existing = findById(id);
+        ObjectMerger.mergeNonNullFields(partialEntity, existing);
+        validate(existing);
+        beforeSave(existing);
+        T saved = save(existing);
+        afterSave(saved);
+        return saved;
     }
 
     @Override
     @Transactional
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new EntityNotFoundException("Entity with id " + id + " not found");
+        T entity = findById(id);
+        beforeDelete(entity);
+        repository.delete(entity);
+        afterDelete(entity);
+    }
+
+    public boolean exists(Long id) {
+        return repository.existsById(id);
+    }
+
+    public long count() {
+        return repository.count();
+    }
+
+    public List<T> findAll() {
+        return repository.findAll();
+    }
+
+    public List<T> findAllByIds(List<Long> ids) {
+        return repository.findAllById(ids);
+    }
+
+    @Transactional
+    public void deleteAll() {
+        repository.deleteAll();
+    }
+
+    protected T save(T entity) {
+        return repository.save(entity);
+    }
+
+    protected Specification<T> buildSpecification(List<SearchCriteria> filters) {
+        if (filters == null || filters.isEmpty()) {
+            return null;
         }
-        repository.deleteById(id);
+
+        return (root, query, cb) -> {
+            List<Predicate> preds = new ArrayList<>();
+            for (SearchCriteria sc : filters) {
+                preds.add(DynamicPredicateBuilder.build(sc, root, cb));
+            }
+            return cb.and(preds.toArray(Predicate[]::new));
+        };
+    }
+
+    protected void validate(T entity) {
+    }
+
+    protected void beforeCreate(T entity) {
+    }
+
+    protected void afterCreate(T entity) {
+    }
+
+    protected void beforeSave(T entity) {
+    }
+
+    protected void afterSave(T entity) {
+    }
+
+    protected void beforeDelete(T entity) {
+    }
+
+    protected void afterDelete(T entity) {
     }
 }
