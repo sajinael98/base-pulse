@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,7 +15,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import com.example.base_pulse.controllers.annotations.DisableCrud;
 import com.example.base_pulse.entities.BaseEntity;
@@ -24,7 +24,6 @@ import com.example.base_pulse.specifications.SortCriteria;
 import com.example.base_pulse.utils.PageResult;
 import com.example.base_pulse.utils.QueryCriteriaBuilder;
 
-@RestController
 public abstract class BaseController<T extends BaseEntity> {
 
     protected final BaseService<T> service;
@@ -88,6 +87,35 @@ public abstract class BaseController<T extends BaseEntity> {
         List<SearchCriteria> searchCriterias = QueryCriteriaBuilder.parseFiltersFromParams(requestParams);
         List<SortCriteria> sort = QueryCriteriaBuilder.parseSortsFromParams(requestParams);
         return ResponseEntity.ok(service.findAll(pageable, searchCriterias, sort));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        if (isDisabled("delete")) {
+            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                    .header("Allow", buildAllowedMethods())
+                    .build();
+        }
+
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAll(
+            @RequestParam Map<String, String> requestParams) {
+
+        if (isDisabled("delete")) {
+            return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                    .header("Allow", buildAllowedMethods())
+                    .build();
+        }
+
+        List<SearchCriteria> searchCriterias = QueryCriteriaBuilder.parseFiltersFromParams(requestParams);
+
+        service.deleteAll(searchCriterias);
+
+        return ResponseEntity.noContent().build();
     }
 
     private boolean isDisabled(String action) {

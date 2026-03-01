@@ -18,7 +18,10 @@ import com.example.base_pulse.utils.ObjectMerger;
 import com.example.base_pulse.utils.PageResult;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaDelete;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
 
 public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
@@ -33,11 +36,7 @@ public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
     @Transactional
     public T create(T entity) {
         validate(entity);
-        beforeCreate(entity);
-        beforeSave(entity);
         T saved = save(entity);
-        afterCreate(saved);
-        afterSave(saved);
         return saved;
     }
 
@@ -81,9 +80,7 @@ public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
 
         validate(fullEntity);
         fullEntity.setId(id);
-        beforeSave(fullEntity);
         T saved = save(fullEntity);
-        afterSave(saved);
         return saved;
     }
 
@@ -93,9 +90,7 @@ public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
         T existing = findById(id);
         ObjectMerger.mergeNonNullFields(partialEntity, existing);
         validate(existing);
-        beforeSave(existing);
         T saved = save(existing);
-        afterSave(saved);
         return saved;
     }
 
@@ -103,9 +98,20 @@ public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
     @Transactional
     public void delete(Long id) {
         T entity = findById(id);
-        beforeDelete(entity);
         repository.delete(entity);
-        afterDelete(entity);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAll(List<SearchCriteria> searchCriterias) {
+
+        if (searchCriterias == null || searchCriterias.isEmpty()) {
+            throw new IllegalArgumentException("deleteAll without filters is not allowed");
+        }
+
+        Specification<T> spec = buildSpecification(searchCriterias);
+
+        repository.delete(spec);
     }
 
     public boolean exists(Long id) {
@@ -147,24 +153,4 @@ public class BaseServiceImpl<T extends BaseEntity> implements BaseService<T> {
         };
     }
 
-    protected void validate(T entity) {
-    }
-
-    protected void beforeCreate(T entity) {
-    }
-
-    protected void afterCreate(T entity) {
-    }
-
-    protected void beforeSave(T entity) {
-    }
-
-    protected void afterSave(T entity) {
-    }
-
-    protected void beforeDelete(T entity) {
-    }
-
-    protected void afterDelete(T entity) {
-    }
 }
